@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chinese HSK Colorizer (No API Key Required)</title>
-  <!-- Free open-source library for Chinese word segmentation & Pinyin -->
-  <script src="https://unpkg.com/pinyin-pro"></script>
+  <title>Chinese Colorized Text Renderer</title>
   <style>
     body {
-      background-color: #0f0f11;
+      background-color: #0a0a0c;
       color: #e0e0e0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
-      padding: 24px;
+      padding: 20px;
       display: flex;
       justify-content: center;
     }
@@ -20,58 +18,45 @@
       max-width: 850px;
       width: 100%;
     }
-    h1 {
-      text-align: center;
-      color: #ffffff;
-      margin-bottom: 24px;
-    }
+    h1 { text-align: center; color: #ffffff; margin-bottom: 20px; }
     .card {
-      background: #18181c;
+      background: #16161a;
       border: 1px solid #2a2a30;
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 20px;
     }
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: #aaa;
-    }
-    textarea, input {
+    label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: #aaa; }
+    textarea {
       width: 100%;
+      height: 110px;
       padding: 12px;
       border-radius: 8px;
       border: 1px solid #333;
-      background-color: #222228;
-      color: #fff;
-      font-size: 15px;
+      background-color: #000000;
+      color: #00ffcc;
+      font-family: monospace;
+      font-size: 14px;
       box-sizing: border-box;
-      margin-bottom: 16px;
     }
     button {
-      width: 100%;
-      padding: 12px;
-      background-color: #10b981;
+      background-color: #2563eb;
       color: #ffffff;
       font-weight: bold;
       border: none;
-      border-radius: 8px;
-      font-size: 16px;
+      padding: 10px 16px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: background 0.2s;
+      margin-top: 10px;
     }
-    button:hover {
-      background-color: #059669;
-    }
-    .output-box {
+    button:hover { background-color: #1d4ed8; }
+    .preview-card {
       background-color: #000000;
       border: 1px solid #2a2a30;
       border-radius: 12px;
-      padding: 24px;
-      font-size: 22px;
-      line-height: 2.2;
+      padding: 28px;
+      font-size: 24px;
+      line-height: 2.3;
       font-family: monospace, sans-serif;
       min-height: 120px;
       overflow-x: auto;
@@ -81,86 +66,60 @@
 <body>
 
 <div class="app-container">
-  <h1>Chinese HSK Colorizer</h1>
+  <h1>Chinese Colorized Text Renderer</h1>
 
+  <!-- STEP 1: PROMPT BOX -->
   <div class="card">
-    <label for="chineseInput">Chinese Sentence:</label>
-    <textarea id="chineseInput" rows="2" placeholder="我快速翻过魔术课本，并没有发现无咏唱的记载。">我快速翻过魔术课本，并没有发现无咏唱的记载。</textarea>
+    <label>1. Copy this Master Prompt (Click button below):</label>
+    <textarea id="promptTemplate" readonly>Format this Chinese text into 3 color-coordinated lines (Hanzi, Pinyin, English).
 
-    <label for="englishInput">English Sentence (Optional):</label>
-    <textarea id="englishInput" rows="2" placeholder="I quickly flipped through the magic textbook, but did not find any record of silent casting.">I quickly flipped through the magic textbook, but did not find any record of silent casting.</textarea>
+Rules:
+- Line 1: Hanzi (word-segmented with spaces)
+- Line 2: Pinyin (word-segmented with tone marks)
+- Line 3: English Translation
+- Assign a unique vibrant color (#FFD700 yellow, #32CD32 green, #FFA500 orange, #FF69B4 pink, #1E90FF cyan, #9370DB purple) to each HSK 3+ word.
+- Apply the EXACT SAME color to the Chinese word, its Pinyin, and its English translation using <span style="color:#HEX">word</span>. Low level words stay #E0E0E0.
+- Return ONLY raw HTML inner elements inside a <div> tag without markdown backticks.
 
-    <button id="colorizeBtn">Colorize HSK 3+ Words</button>
+Text: [PASTE YOUR CHINESE SENTENCE HERE]</textarea>
+    <button onclick="copyPromptText()">Copy Prompt</button>
   </div>
 
+  <!-- STEP 2: CODE INPUT BOX -->
   <div class="card">
-    <label>Result:</label>
-    <div id="output" class="output-box">
-      <span style="color: #666;">Colored output will appear here...</span>
+    <label>2. Paste the Code output from ChatGPT / DeepSeek here:</label>
+    <textarea id="codeInput" placeholder="Paste the generated HTML code here..." oninput="renderCode()"></textarea>
+  </div>
+
+  <!-- STEP 3: LIVE RENDER OUTPUT -->
+  <div class="card">
+    <label>3. Rendered Result (Matches Photo):</label>
+    <div id="previewCard" class="preview-card">
+      <span style="color: #555; font-size: 16px;">Your colorized text will instantly render here as soon as you paste the code...</span>
     </div>
   </div>
 </div>
 
 <script>
-  // Dictionary of high-level vocabulary (HSK 3+) mapped to English translation keywords
-  const hskDictionary = {
-    "翻过": { level: 3, translation: "flipped through", color: "#FFD700" }, // Yellow
-    "课本": { level: 3, translation: "textbook", color: "#32CD32" },        // Green
-    "并没有": { level: 3, translation: "but did not", color: "#FFA500" },     // Orange
-    "无咏唱": { level: 5, translation: "silent casting", color: "#FF69B4" },  // Pink
-    "记载": { level: 4, translation: "record", color: "#1E90FF" },          // Cyan/Blue
-    "快速": { level: 3, translation: "quickly", color: "#9370DB" }          // Purple
-  };
+  function copyPromptText() {
+    const promptText = document.getElementById('promptTemplate');
+    promptText.select();
+    navigator.clipboard.writeText(promptText.value);
+    alert('Prompt copied to clipboard! Paste it into ChatGPT/DeepSeek along with your Chinese text.');
+  }
 
-  const palette = ["#FFD700", "#32CD32", "#FFA500", "#FF69B4", "#1E90FF", "#9370DB", "#00FFFF"];
-
-  document.getElementById('colorizeBtn').addEventListener('click', () => {
-    const chineseText = document.getElementById('chineseInput').value.trim();
-    let englishText = document.getElementById('englishInput').value.trim();
-    const outputDiv = document.getElementById('output');
-
-    if (!chineseText) return alert("Please enter Chinese text.");
-
-    // Word segment Chinese text using Intl.Segmenter
-    const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
-    const segments = Array.from(segmenter.segment(chineseText)).map(s => s.segment);
-
-    let chineseLine = "";
-    let pinyinLine = "";
-    let colorIndex = 0;
-
-    segments.forEach((word) => {
-      // Get pinyin for the word
-      const wordPinyin = pinyinPro.pinyin(word, { toneType: 'symbol' });
-
-      // Check if word is in HSK 3+ dictionary
-      if (hskDictionary[word]) {
-        const item = hskDictionary[word];
-        const color = item.color || palette[colorIndex % palette.length];
-        colorIndex++;
-
-        chineseLine += `<span style="color: ${color};">${word}</span> `;
-        pinyinLine += `<span style="color: ${color};">${wordPinyin}</span> `;
-
-        // Highlight matching word in English translation if present
-        if (englishText && item.translation) {
-          const regExp = new RegExp(`\\b${item.translation}\\b`, 'gi');
-          englishText = englishText.replace(regExp, `<span style="color: ${color};">${item.translation}</span>`);
-        }
-      } else {
-        chineseLine += `<span style="color: #E0E0E0;">${word}</span> `;
-        pinyinLine += `<span style="color: #E0E0E0;">${wordPinyin}</span> `;
-      }
-    });
-
-    let resultHTML = `<div>${chineseLine.trim()}</div>`;
-    resultHTML += `<div>${pinyinLine.trim()}</div>`;
-    if (englishText) {
-      resultHTML += `<div>${englishText}</div>`;
+  function renderCode() {
+    const rawCode = document.getElementById('codeInput').value;
+    // Strip markdown code block wrappers if copied accidentally
+    let cleanedCode = rawCode.replace(/```html/gi, '').replace(/```/g, '').trim();
+    
+    const previewDiv = document.getElementById('previewCard');
+    if (cleanedCode) {
+      previewDiv.innerHTML = cleanedCode;
+    } else {
+      previewDiv.innerHTML = '<span style="color: #555; font-size: 16px;">Your colorized text will instantly render here as soon as you paste the code...</span>';
     }
-
-    outputDiv.innerHTML = resultHTML;
-  });
+  }
 </script>
 </body>
 </html>
