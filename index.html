@@ -10,67 +10,86 @@
       color: #e0e0e0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 12px;
       display: flex;
       justify-content: center;
     }
     .app-container {
-      max-width: 850px;
+      max-width: 800px;
       width: 100%;
     }
-    h1 { text-align: center; color: #ffffff; margin-bottom: 20px; }
+    h2 {
+      text-align: center;
+      color: #ffffff;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
     .card {
       background: #16161a;
       border: 1px solid #2a2a30;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
     }
-    label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: #aaa; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #aaa;
+    }
     textarea {
       width: 100%;
-      height: 110px;
-      padding: 12px;
-      border-radius: 8px;
+      height: 50px;
+      padding: 8px;
+      border-radius: 6px;
       border: 1px solid #333;
       background-color: #000000;
       color: #00ffcc;
       font-family: monospace;
-      font-size: 14px;
+      font-size: 12px;
       box-sizing: border-box;
+      resize: vertical;
     }
     button {
       background-color: #2563eb;
       color: #ffffff;
       font-weight: bold;
       border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
+      padding: 6px 12px;
+      border-radius: 4px;
       cursor: pointer;
-      margin-top: 10px;
+      font-size: 12px;
     }
     button:hover { background-color: #1d4ed8; }
+    
+    /* COMPACT RESULT DISPLAY */
     .preview-card {
       background-color: #000000;
       border: 1px solid #2a2a30;
-      border-radius: 12px;
-      padding: 28px;
-      font-size: 24px;
-      line-height: 2.3;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 17px;        /* Reduced font size */
+      line-height: 1.6;        /* Tightened spacing */
       font-family: monospace, sans-serif;
-      min-height: 120px;
-      overflow-x: auto;
+      min-height: 90px;
+      word-wrap: break-word;
     }
   </style>
 </head>
 <body>
 
 <div class="app-container">
-  <h1>Chinese Colorized Text Renderer</h1>
+  <h2>Chinese HSK Colorizer</h2>
 
   <!-- STEP 1: PROMPT BOX -->
   <div class="card">
-    <label>1. Copy this Master Prompt (Click button below):</label>
+    <label>
+      <span>1. Copy Master Prompt:</span>
+      <button onclick="copyPromptText()">Copy Prompt</button>
+    </label>
     <textarea id="promptTemplate" readonly>Format this Chinese text into 3 color-coordinated lines (Hanzi, Pinyin, English).
 
 Rules:
@@ -82,20 +101,19 @@ Rules:
 - Return ONLY raw HTML inner elements inside a <div> tag without markdown backticks.
 
 Text: [PASTE YOUR CHINESE SENTENCE HERE]</textarea>
-    <button onclick="copyPromptText()">Copy Prompt</button>
   </div>
 
   <!-- STEP 2: CODE INPUT BOX -->
   <div class="card">
-    <label>2. Paste the Code output from ChatGPT / DeepSeek here:</label>
-    <textarea id="codeInput" placeholder="Paste the generated HTML code here..." oninput="renderCode()"></textarea>
+    <label>2. Paste Code Output Here:</label>
+    <textarea id="codeInput" placeholder="Paste generated HTML code here..." oninput="renderCode()"></textarea>
   </div>
 
   <!-- STEP 3: LIVE RENDER OUTPUT -->
   <div class="card">
-    <label>3. Rendered Result (Matches Photo):</label>
+    <label>3. Rendered Result:</label>
     <div id="previewCard" class="preview-card">
-      <span style="color: #555; font-size: 16px;">Your colorized text will instantly render here as soon as you paste the code...</span>
+      <span style="color: #555; font-size: 14px;">Colorized text will appear here...</span>
     </div>
   </div>
 </div>
@@ -105,19 +123,18 @@ Text: [PASTE YOUR CHINESE SENTENCE HERE]</textarea>
     const promptText = document.getElementById('promptTemplate');
     promptText.select();
     navigator.clipboard.writeText(promptText.value);
-    alert('Prompt copied to clipboard! Paste it into ChatGPT/DeepSeek along with your Chinese text.');
+    alert('Prompt copied!');
   }
 
   function renderCode() {
     const rawCode = document.getElementById('codeInput').value;
-    // Strip markdown code block wrappers if copied accidentally
     let cleanedCode = rawCode.replace(/```html/gi, '').replace(/```/g, '').trim();
     
     const previewDiv = document.getElementById('previewCard');
     if (cleanedCode) {
       previewDiv.innerHTML = cleanedCode;
     } else {
-      previewDiv.innerHTML = '<span style="color: #555; font-size: 16px;">Your colorized text will instantly render here as soon as you paste the code...</span>';
+      previewDiv.innerHTML = '<span style="color: #555; font-size: 14px;">Colorized text will appear here...</span>';
     }
   }
 </script>
