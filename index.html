@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chinese HSK Word Colorizer</title>
+  <title>Chinese HSK Colorizer (No API Key Required)</title>
+  <!-- Free open-source library for Chinese word segmentation & Pinyin -->
+  <script src="https://unpkg.com/pinyin-pro"></script>
   <style>
     body {
       background-color: #0f0f11;
@@ -37,7 +39,7 @@
       font-size: 14px;
       color: #aaa;
     }
-    input, textarea, select, button {
+    textarea, input {
       width: 100%;
       padding: 12px;
       border-radius: 8px;
@@ -49,15 +51,19 @@
       margin-bottom: 16px;
     }
     button {
-      background-color: #3b82f6;
+      width: 100%;
+      padding: 12px;
+      background-color: #10b981;
       color: #ffffff;
       font-weight: bold;
       border: none;
+      border-radius: 8px;
+      font-size: 16px;
       cursor: pointer;
       transition: background 0.2s;
     }
     button:hover {
-      background-color: #2563eb;
+      background-color: #059669;
     }
     .output-box {
       background-color: #000000;
@@ -78,71 +84,82 @@
   <h1>Chinese HSK Colorizer</h1>
 
   <div class="card">
-    <label for="apiKey">API Key (OpenAI or DeepSeek):</label>
-    <input type="password" id="apiKey" placeholder="sk-..." />
+    <label for="chineseInput">Chinese Sentence:</label>
+    <textarea id="chineseInput" rows="2" placeholder="我快速翻过魔术课本，并没有发现无咏唱的记载。">我快速翻过魔术课本，并没有发现无咏唱的记载。</textarea>
 
-    <label for="apiEndpoint">Select API Provider:</label>
-    <select id="apiEndpoint">
-      <option value="https://api.openai.com/v1/chat/completions">OpenAI (gpt-4o-mini)</option>
-      <option value="https://api.deepseek.com/chat/completions">DeepSeek (deepseek-chat)</option>
-    </select>
+    <label for="englishInput">English Sentence (Optional):</label>
+    <textarea id="englishInput" rows="2" placeholder="I quickly flipped through the magic textbook, but did not find any record of silent casting.">I quickly flipped through the magic textbook, but did not find any record of silent casting.</textarea>
 
-    <label for="chineseInput">Chinese Text:</label>
-    <textarea id="chineseInput" rows="3" placeholder="我快速翻过魔术课本，并没有发现无咏唱的记载。"></textarea>
-
-    <button id="generateBtn">Colorize HSK 3+ Words</button>
+    <button id="colorizeBtn">Colorize HSK 3+ Words</button>
   </div>
 
   <div class="card">
     <label>Result:</label>
     <div id="output" class="output-box">
-      <span style="color: #666;">Rendered output will appear here...</span>
+      <span style="color: #666;">Colored output will appear here...</span>
     </div>
   </div>
 </div>
 
 <script>
-  const keyInput = document.getElementById('apiKey');
-  keyInput.value = localStorage.getItem('hsk_app_key') || '';
-  keyInput.addEventListener('change', () => localStorage.setItem('hsk_app_key', keyInput.value));
+  // Dictionary of high-level vocabulary (HSK 3+) mapped to English translation keywords
+  const hskDictionary = {
+    "翻过": { level: 3, translation: "flipped through", color: "#FFD700" }, // Yellow
+    "课本": { level: 3, translation: "textbook", color: "#32CD32" },        // Green
+    "并没有": { level: 3, translation: "but did not", color: "#FFA500" },     // Orange
+    "无咏唱": { level: 5, translation: "silent casting", color: "#FF69B4" },  // Pink
+    "记载": { level: 4, translation: "record", color: "#1E90FF" },          // Cyan/Blue
+    "快速": { level: 3, translation: "quickly", color: "#9370DB" }          // Purple
+  };
 
-  document.getElementById('generateBtn').addEventListener('click', async () => {
-    const text = document.getElementById('chineseInput').value.trim();
-    const apiKey = keyInput.value.trim();
-    const endpoint = document.getElementById('apiEndpoint').value;
+  const palette = ["#FFD700", "#32CD32", "#FFA500", "#FF69B4", "#1E90FF", "#9370DB", "#00FFFF"];
+
+  document.getElementById('colorizeBtn').addEventListener('click', () => {
+    const chineseText = document.getElementById('chineseInput').value.trim();
+    let englishText = document.getElementById('englishInput').value.trim();
     const outputDiv = document.getElementById('output');
 
-    if (!text) return alert("Please enter Chinese text.");
-    if (!apiKey) return alert("Please enter your API key.");
+    if (!chineseText) return alert("Please enter Chinese text.");
 
-    outputDiv.innerHTML = '<span style="color: #888;">Colorizing text...</span>';
+    // Word segment Chinese text using Intl.Segmenter
+    const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+    const segments = Array.from(segmenter.segment(chineseText)).map(s => s.segment);
 
-    const systemPrompt = `You are a Chinese language learning formatter. Process input text into 3 HTML lines:
-Line 1: Hanzi (word-segmented with spaces)
-Line 2: Pinyin (word-segmented with tone marks)
-Line 3: English Translation
+    let chineseLine = "";
+    let pinyinLine = "";
+    let colorIndex = 0;
 
-Identify vocabulary at HSK 3 level or above. Assign each matching word across all 3 lines the EXACT SAME unique vibrant hex color (e.g., #FFD700, #32CD32, #FFA500, #FF69B4, #1E90FF) using <span style="color: HEX;">...</span>. Keep lower-level grammar/words as #E0E0E0. Return ONLY valid HTML inner elements inside a <div> without markdown block backticks.`;
+    segments.forEach((word) => {
+      // Get pinyin for the word
+      const wordPinyin = pinyinPro.pinyin(word, { toneType: 'symbol' });
 
-    const model = endpoint.includes('deepseek') ? 'deepseek-chat' : 'gpt-4o-mini';
+      // Check if word is in HSK 3+ dictionary
+      if (hskDictionary[word]) {
+        const item = hskDictionary[word];
+        const color = item.color || palette[colorIndex % palette.length];
+        colorIndex++;
 
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: model,
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: text }],
-          temperature: 0.3
-        })
-      });
+        chineseLine += `<span style="color: ${color};">${word}</span> `;
+        pinyinLine += `<span style="color: ${color};">${wordPinyin}</span> `;
 
-      const data = await res.json();
-      let html = data.choices[0].message.content.replace(/```html/g, '').replace(/```/g, '').trim();
-      outputDiv.innerHTML = html;
-    } catch (err) {
-      outputDiv.innerHTML = `<span style="color: #ff6b6b;">Error: ${err.message}</span>`;
+        // Highlight matching word in English translation if present
+        if (englishText && item.translation) {
+          const regExp = new RegExp(`\\b${item.translation}\\b`, 'gi');
+          englishText = englishText.replace(regExp, `<span style="color: ${color};">${item.translation}</span>`);
+        }
+      } else {
+        chineseLine += `<span style="color: #E0E0E0;">${word}</span> `;
+        pinyinLine += `<span style="color: #E0E0E0;">${wordPinyin}</span> `;
+      }
+    });
+
+    let resultHTML = `<div>${chineseLine.trim()}</div>`;
+    resultHTML += `<div>${pinyinLine.trim()}</div>`;
+    if (englishText) {
+      resultHTML += `<div>${englishText}</div>`;
     }
+
+    outputDiv.innerHTML = resultHTML;
   });
 </script>
 </body>
